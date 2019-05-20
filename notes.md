@@ -1,21 +1,24 @@
 # Docker Tutorial notes
 
-
 ---    
 ### Docker Concepts
 
 * Docker is a platform for developers and sysadmins to develop, deploy, and run applications with containers. The use of Linux containers to deploy applications is called containerization. Containers are not new, but their use for easily deploying applications is.
 
 * Containerization is increasingly popular because containers are:
-- Flexible: Even the most complex applications can be containerized.
-- Lightweight: Containers leverage and share the host kernel.
-- Interchangeable: You can deploy updates and upgrades on-the-fly.
-- Portable: You can build locally, deploy to the cloud, and run anywhere.
-- Scalable: You can increase and automatically distribute container replicas.
-- Stackable: You can stack services vertically and on-the-fly.
+    - Flexible: Even the most complex applications can be containerized.
+    - Lightweight: Containers leverage and share the host kernel.
+    - Interchangeable: You can deploy updates and upgrades on-the-fly.
+    - Portable: You can build locally, deploy to the cloud, and run anywhere.
+    - Scalable: You can increase and automatically distribute container replicas.
+    - Stackable: You can stack services vertically and on-the-fly.
 
-* Add your user to docker group (on linux) to avoid sudo.  
-      `sudo usermod -aG docker <username>`
+* Containerization makes Continuous Integration /Continuous Deployment seamless. For example:
+    - applications have no system dependencies
+    - updates can be pushed to any part of a distributed application 
+    - resource density can be optimized.
+    With Docker, scaling your application is a matter of spinning up new executables, not running heavy VM hosts.
+
 * Using a script from - get.docker.com in install docker on linux
     * This script is meant for quick & easy install via:
     `$ curl -fsSL https://get.docker.com -o get-docker.sh`
@@ -38,8 +41,6 @@
 
 * By contrast, a virtual machine (VM) runs a full-blown “guest” operating system with virtual access to host resources through a hypervisor. In general, VMs provide an environment with more resources than most applications need.
 
-
-
 * We can have many containers running off the same image  
 * Containers 
     * Are not Mini-VMs
@@ -51,8 +52,23 @@
     `$ docker container run -p 80:80 --name nginx_server -d nginx`  
     `$ docker container run --publish 8080:80 --name httpd_server --detach httpd`
 
----
 
+### Services
+* Services are really just “containers in production.” A service only runs one image, but it codifies the way that image runs—what ports it should use, how many replicas of the container should run so the service has the capacity it needs, and so on. Scaling a service changes the number of container instances running that piece of software, assigning more computing resources to the service in the process.
+
+* Luckily it’s very easy to define, run, and scale services with the Docker platform -- just write a docker-compose.yml file.
+* A docker-compose.yml file is a YAML file that defines how Docker containers should behave in production
+
+---
+### Swarm Cluster
+* Multi-container, multi-machine applications are made possible by joining multiple machines into a “Dockerized” cluster called a swarm.
+* A swarm is a group of machines that are running Docker and joined into a cluster. After that has happened, you continue to run the Docker commands you’re used to, but now they are executed on a cluster by a swarm manager. The machines in a swarm can be physical or virtual. After joining a swarm, they are referred to as nodes.
+
+### Stack
+* A stack is a group of interrelated services that share dependencies, and can be orchestrated and scaled together. A single stack is capable of defining and coordinating the functionality of an entire application (though very complex applications may want to use multiple stacks).
+
+
+---
 ### CLI Process monitoring : ~ what’s going on in a container
 `$ docker container logs mysql_server`  
 `$ docker container inspect nginx_server`   
@@ -192,9 +208,13 @@ tip:-> Static IPs & using IPs for talking to containers is an anti-pattern. Avoi
 `$ docker image push ksignk/<image>` - push it to your hub             
 
 ### Dockerfile 
+* Dockerfile defines what goes on in the environment inside your container. 
+* Access to resources like networking interfaces and disk drives is virtualized inside this environment, which is isolated from the rest of your system, so you need to map ports to the outside world, and be specific about what files you want to “copy in” to that environment. 
+* However, after doing that, you can expect that the build of your app defined in this Dockerfile behaves exactly the same wherever it runs.
+
 
 * Package Managers like apt, yum  are one of the reasons to build containers from ubuntu,centOS, Debian or Fedora
-* `ENV` - environment variables were chosen as preferred way to inject key/value is they work everywherer on every OS and config
+* `ENV` - environment variables were chosen as preferred way to inject key/value is they work everywhere on every OS and config
 
 * `RUN` - run shell commands
 `&& ` - use chaining to save on layers
@@ -254,3 +274,93 @@ tip:-> Static IPs & using IPs for talking to containers is an anti-pattern. Avoi
     Batteries Included, But Removable
 
 
+
+### CheatSheet
+----
+* List Docker CLI commands      
+`$ docker`      
+`$ docker container --help`
+
+* Display Docker version and info        
+`$ docker --version`        
+`$ docker version`      
+`$ docker info`     
+
+* Execute Docker image      
+`$ docker run hello-world`      
+
+* List Docker images    
+`$ docker image ls`     
+
+* List Docker containers (running, all, all in quiet mode)      
+`$ docker container ls`     
+`$ docker container ls --all`       
+`$ docker container ls -aq`
+
+
+* Add your user to docker group (on linux) to avoid sudo.  
+      `sudo usermod -aG docker <username>`
+----
+* part2
+* Note: Accessing the name of the host when inside a container retrieves the container ID, which is like the process ID for a running executable.
+~~~docker
+    docker build -t friendlyhello .  # Create image using this directory's Dockerfile
+    docker run -p 4000:80 friendlyhello  # Run "friendlyhello" mapping port 4000 to 80
+    docker run -d -p 4000:80 friendlyhello         # Same thing, but in detached mode
+    docker container ls                                # List all running containers
+    docker container ls -a             # List all containers, even those not running
+    docker container stop <hash>           # Gracefully stop the specified container
+    docker container kill <hash>         # Force shutdown of the specified container
+    docker container rm <hash>        # Remove specified container from this machine
+    docker container rm $(docker container ls -a -q)         # Remove all containers
+    docker image ls -a                             # List all images on this machine
+    docker image rm <image id>            # Remove specified image from this machine
+    docker image rm $(docker image ls -a -q)   # Remove all images from this machine
+    docker login             # Log in this CLI session using your Docker credentials
+    docker tag <image> username/repository:tag  # Tag <image> for upload to registry
+    docker push username/repository:tag            # Upload tagged image to registry
+    docker run username/repository:tag                   # Run image from a registry
+~~~
+----
+* part3
+~~~docker
+
+docker stack ls                                            # List stacks or apps
+docker stack deploy -c <composefile> <appname>  # Run the specified Compose file
+docker service ls                 # List running services associated with an app
+docker service ps <service>                  # List tasks associated with an app
+docker inspect <task or container>                   # Inspect task or container
+docker container ls -q                                      # List container IDs
+docker stack rm <appname>                             # Tear down an application
+docker swarm leave --force      # Take down a single node swarm from the manager
+
+~~~
+
+----
+* part4
+~~~docker 
+docker-machine create --driver virtualbox myvm1 # Create a VM (Mac, Win7, Linux)
+docker-machine create -d hyperv --hyperv-virtual-switch "myswitch" myvm1 # Win10
+docker-machine env myvm1                # View basic information about your node
+docker-machine ssh myvm1 "docker node ls"         # List the nodes in your swarm
+docker-machine ssh myvm1 "docker node inspect <node ID>"        # Inspect a node
+docker-machine ssh myvm1 "docker swarm join-token -q worker"   # View join token
+docker-machine ssh myvm1   # Open an SSH session with the VM; type "exit" to end
+docker node ls                # View nodes in swarm (while logged on to manager)
+docker-machine ssh myvm2 "docker swarm leave"  # Make the worker leave the swarm
+docker-machine ssh myvm1 "docker swarm leave -f" # Make master leave, kill swarm
+docker-machine ls # list VMs, asterisk shows which VM this shell is talking to
+docker-machine start myvm1            # Start a VM that is currently not running
+docker-machine env myvm1      # show environment variables and command for myvm1
+eval $(docker-machine env myvm1)         # Mac command to connect shell to myvm1
+& "C:\Program Files\Docker\Docker\Resources\bin\docker-machine.exe" env myvm1 | Invoke-Expression   # Windows command to connect shell to myvm1
+docker stack deploy -c <file> <app>  # Deploy an app; command shell must be set to talk to manager (myvm1), uses local Compose file
+docker-machine scp docker-compose.yml myvm1:~ # Copy file to node's home dir (only required if you use ssh to connect to manager and deploy the app)
+docker-machine ssh myvm1 "docker stack deploy -c <file> <app>"   # Deploy an app using ssh (you must have first copied the Compose file to myvm1)
+eval $(docker-machine env -u)     # Disconnect shell from VMs, use native docker
+docker-machine stop $(docker-machine ls -q)               # Stop all running VMs
+docker-machine rm $(docker-machine ls -q) # Delete all VMs and their disk images
+
+~~~
+
+----

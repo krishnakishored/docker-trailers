@@ -1,0 +1,1 @@
+docker exec --privileged -it kafka bash

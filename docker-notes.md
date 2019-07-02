@@ -364,3 +364,11 @@ docker-machine rm $(docker-machine ls -q) # Delete all VMs and their disk images
 ~~~
 
 ----
+
+
+### References
+1. https://docs.docker.com/compose/compose-file/
+1. https://training.play-with-docker.com/docker-volumes/
+1. https://www.elastic.co/guide/en/elastic-stack-get-started/7.1/get-started-elastic-stack.html
+1. https://linuxize.com/post/how-to-install-elasticsearch-on-ubuntu-18-04/
+1. https://www.elastic.co/guide/en/elasticsearch/reference/7.2/docker.html

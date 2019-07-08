@@ -262,8 +262,11 @@ tip:-> Static IPs & using IPs for talking to containers is an anti-pattern. Avoi
 
 
 ### Docker swarm
+* Swarm Mode is a clustering solution built inside Docker
 * play-with-docker.com  
     - only needs a browserm, but resets after 4 hours
+* Raft database stores the config of the swarm 
+* "docker service" in swarm replaces the "docker run" command
 
 * docker-machine + VirtualBox
 * Digital Ocean + Docker install    
@@ -372,3 +375,4 @@ docker-machine rm $(docker-machine ls -q) # Delete all VMs and their disk images
 1. https://www.elastic.co/guide/en/elastic-stack-get-started/7.1/get-started-elastic-stack.html
 1. https://linuxize.com/post/how-to-install-elasticsearch-on-ubuntu-18-04/
 1. https://www.elastic.co/guide/en/elasticsearch/reference/7.2/docker.html
+1. https://www.elastic.co/guide/en/elasticsearch/reference/current/important-settings.html

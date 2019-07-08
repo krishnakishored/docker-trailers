@@ -1,75 +1,167 @@
 version: '3'
 services:
+  app:
+    image: kcodek/dummy-app:1.0.0
+    build:
+      context: dummy-app
+      dockerfile: Dockerfile
+    networks:
+     - esnet
+###############################################################################
+  # elasticsearch:
+  #   hostname: elasticsearch
+  #   image: kcodek/elasticsearch:1.0.0
+  #   build:
+  #     context: elasticsearch
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - cluster.name=docker-logs-elk-cluster
+  #     - "discovery.type=single-node"
+  #     - bootstrap.memory_lock=true
+  #     - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+  #   # ulimits:
+  #   #   memlock:
+  #   #     soft: -1
+  #   #     hard: -1
+  #   ports:
+  #     - 9200:9200
+  #   volumes:
+  #     - esdata01:/usr/share/elasticsearch/data
+  #   networks:
+  #     - esnet
+
+###############################################################################
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
     container_name: elasticsearch
-    ports:
-      - "9200:9200"
-      - "9300:9300"
     environment:
-      discovery.type: single-node
-      # DISCOVERY_TYPE: single-node
+      - node.name=elasticsearch
+      - discovery.seed_hosts=es02
+      - cluster.initial_master_nodes=elasticsearch,es02
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     volumes:
       - esdata01:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - esnet
+  es02:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
+    container_name: es02
+    environment:
+      - node.name=es02
+      - discovery.seed_hosts=elasticsearch
+      - cluster.initial_master_nodes=elasticsearch,es02
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata02:/usr/share/elasticsearch/data
     networks:
       - esnet
 
 
+###############################################################################
+
+  # elasticsearch:
+  #   container_name: elasticsearch
+  #   image: kcodek/elasticsearch:1.0.0
+  #   # image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
+  #   build:
+  #     context: elasticsearch
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     # discovery.type: single-node
+  #     - cluster.name=docker-logs-elk-cluster
+  #     - bootstrap.memory_lock=true
+  #     - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+  #     # - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+  #     # - HOSTNAME=elasticsearch
+  #     # - ES_NETWORK_HOST=127.0.0.1
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   ports:
+  #     - "9200:9200"
+  #     - "9300:9300"
+  #   volumes:
+  #     - esdata01:/usr/share/elasticsearch/data
+  #   networks:
+  #     - esnet
+###############################################################################
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.2.0
-    container_name: kibana
+    # image: kcodek/kibana:1.0.0
+    image: docker.elastic.co/kibana/kibana:7.2.0 
+    # build:
+    #   context: kibana
+    #   dockerfile: Dockerfile
+    # container_name: kibana
     ports:
       - "5601:5601"
     depends_on:
       - elasticsearch  
-    # volumes:
-    #     - ./kibana.yml: /usr/share/kibana/config/kibana.yml
     environment:
-      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      - "LOGGING_QUIET=true"
+      # ELASTICSEARCH_HOSTS: http://elasticsearch:9200
     networks:
      - esnet
-
-
+###############################################################################
   filebeat:
-    image: docker.elastic.co/beats/filebeat:7.2.0
+    hostname: filebeat
+    image: kcodek/filebeat:1.0.0
+    build:
+      context: filebeat
+      dockerfile: Dockerfile
+    volumes:
+    # needed to access all docker logs (read only) :
+     - "/var/lib/docker/containers:/usr/share/dockerlogs/data:ro"
+      # needed to access additional informations about containers
+     - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
-      - esnet
-    depends_on:
-      - elasticsearch
-      - kibana
+     - esnet
+###############################################################################
+  logstash: 
+    hostname: logstash 
+    image: kcodek/logstash:1.0.0
+    build:
+      context: logstash
+      dockerfile: Dockerfile
+    ports:
+      - 5044:5044
     environment:
-      setup.kibana.host: kibana:5601
-      output.elasticsearch.hosts: "elasticsearch:9200"
-      # SETUP_KIBANA_HOST: kibana:5601
-      # OUTPUT_ELASTICSEARCH_HOSTS: "elasticsearch:9200"
-    command: filebeat -e -strict.perms=false
-    # volumes:
-    #   - ./filebeat.docker.yml:/usr/share/filebeat/filebeat.yml:ro
-    #   - ./filebeat_sample_log:/usr/share/filebeat/logs
-
-
-  # logstash:
-  #   # build: logstash/
-  #   image: docker.elastic.co/logstash/logstash:7.2.0
-  #   command: -f /etc/logstash/conf.d/
+      LOG_LEVEL: error
+    networks:
+     - esnet    
+###############################################################################
+  # kafka:
+  #   image: landoop/fast-data-dev
   #   ports:
-  #     - "5000:5000"
-  #     - "5044:5044"
-  #   networks:
+  #     - "2181:2181"
+  #     - "3030:3030"
+  #     - "9092:9092"
+  #   container_name: kafka  
+  #   environment:
+  #     ADV_HOST: 10.10.15.11
+  #   networks: 
   #     - esnet
-  #   depends_on:
-  #     - elasticsearch
-  # # restart: unless-stopped
-    # volumes:
-    #   - ./logstash/config:/etc/logstash/conf.d
-    #   - ./logs:/logs
-
-
-
+###############################################################################
 volumes:
   esdata01:
     driver: local
-
+  esdata02:
+    driver: local
+###############################################################################
 networks:
   esnet:
     driver: bridge    

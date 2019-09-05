@@ -271,13 +271,17 @@ tip:-> Static IPs & using IPs for talking to containers is an anti-pattern. Avoi
 * docker-machine + VirtualBox
 * Digital Ocean + Docker install    
 
+----
+### Docker & DevOps
+
+----
 ### Misc
     Logo: MobyDock
     Mascot : @gordonTheTurtle
     Batteries Included, But Removable
 
 
-
+----
 ### CheatSheet
 ----
 * List Docker CLI commands      
@@ -376,3 +380,6 @@ docker-machine rm $(docker-machine ls -q) # Delete all VMs and their disk images
 1. https://linuxize.com/post/how-to-install-elasticsearch-on-ubuntu-18-04/
 1. https://www.elastic.co/guide/en/elasticsearch/reference/7.2/docker.html
 1. https://www.elastic.co/guide/en/elasticsearch/reference/current/important-settings.html
+1. https://12factor.net/
+1. https://www.oreilly.com/ideas/3-docker-compose-features-for-improving-team-development-workflow
+1. https://www.qemu.org/

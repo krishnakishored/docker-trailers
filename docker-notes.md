@@ -385,5 +385,6 @@ docker-machine rm $(docker-machine ls -q) # Delete all VMs and their disk images
 1. https://www.qemu.org/
 1. https://blog.hasura.io/an-exhaustive-guide-to-writing-dockerfiles-for-node-js-web-apps-bbee6bd2f3c/
 1. https://github.com/BretFisher/node-docker-good-defaults
-1. https://github.com/nodejs/docker-node/blob/master/docs/BestPractices.md#cmd
-
+1. https://github.com/nodejs/docker-node/blob/master/docs/BestPractices.md
+1. https://medium.com/@huseinzolkepli/elk-for-flask-bc486d58deb3
+1. https://www.elastic.co/guide/en/elasticsearch/reference/6.5/deb.html

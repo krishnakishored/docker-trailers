@@ -1,0 +1,3 @@
+service elasticsearch start
+service kibana start
+supervisord --nodaemon -c supervisord.conf

@@ -1,0 +1,26 @@
+version: "3"
+services:
+    # -- other configs -- 
+    database:
+        image: 'mongo'
+        container_name: 'mongo-lieder-container'
+        environment: 
+            - MONGO_INITDB_DATABASE=songsrepo # 
+            - MONGO_INITDB_ROOT_USERNAME=lieder_user_1 # container root username
+            - MONGO_INITDB_ROOT_PASSWORD=lieder_user_1 # container root password
+        volumes: 
+            - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+            - ./mongo-volume:/data/db
+        ports:
+            - '27017-27019:27017-27019'
+            
+# $ docker-compose -f docker-compose.yml up
+# $ docker-compose -f docker-compose.yml down             
+# $ docker exec -it <container-name> bash
+# $ docker exec -it mongo-lieder-container bash 
+
+# # In the docker container exec shell
+# $ mongo -u lieder_user_1 -p lieder_user_1 --authenticationDatabase songsrepo
+
+# # Connection String
+# mongodb://YourUsername:YourPasswordHere@127.0.0.1:27017/your-database-name

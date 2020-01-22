@@ -1,6 +1,58 @@
 # Docker Tutorial notes
+------    
 
----    
+### ELK stack
+
+#### Elastic Search 
+
+1. elasticsearch & kibana  
+    Submit a _cat/nodes request to see that the nodes are up and running:
+        - `$ curl -X GET "localhost:9200/_cat/nodes?v&pretty"`
+
+#### Logstash 
+1. Logstash has two types of configuration files: pipeline configuration files, which define the Logstash processing pipeline, and settings files, which specify options that control Logstash startup and execution.
+    - `$ docker run --rm -it -v ./pipeline/:/usr/share/logstash/pipeline/ docker.elastic.co/logstash/logstash:7.5.2`
+
+1. On Unix-like operating systems, the nc command runs Netcat, a utility for sending raw data over a network connection.
+   `$ ls | nc localhost 5000`
+
+
+#### Kibana 
+1. Kibana has its own API for saved objects, including Index Patterns.
+   The following examples are for an Index Pattern with an ID of logstash-*.
+   
+    ~~~sh
+     curl -XPOST -D- 'http://localhost:5601/api/saved_objects/index-pattern' \
+    -H 'Content-Type: application/json' \
+    -H 'kbn-version: 7.5.2' \
+    -d '{"attributes":{"title":"logstash-*","timeFieldName":"@timestamp"}}'
+    ~~~
+     >reponse
+
+        HTTP/1.1 200 OK
+        kbn-name: kibana
+        kbn-xpack-sig: 16334c76451733348fa7089edef387f0
+        content-type: application/json; charset=utf-8
+        cache-control: no-cache
+        content-length: 255
+        Date: Wed, 22 Jan 2020 08:26:27 GMT
+        Connection: keep-alive
+
+        {"type":"index-pattern","id":"e1eaf1f0-3cf0-11ea-9b8c-432d77c94b5d","attributes":{"title":"logstash-*","timeFieldName":"@timestamp"},"references":[],"migrationVersion":{"index-pattern":"6.5.0"},"updated_at":"2020-01-22T08:26:26.830Z","version":"WzMsMV0="}%
+
+
+--------
+#### Tips for running ELK
+
+1. By default, the stack exposes the following ports:
+    - `5000`: Logstash will listen for any TCP input on port 5000
+    - `9200`: Elasticsearch for HTTP REST API
+    - `9300`: Elasticsearch TCP nodes communication
+    - `5601`: Kibana web UI
+
+1. `$ lsof -PiTCP -sTCP:LISTEN`
+
+--------  
 ### Docker Concepts
 
 * Docker is a platform for developers and sysadmins to develop, deploy, and run applications with containers. The use of Linux containers to deploy applications is called containerization. Containers are not new, but their use for easily deploying applications is.
@@ -250,6 +302,7 @@ tip:-> Static IPs & using IPs for talking to containers is an anti-pattern. Avoi
     - Connect to one or multiple containers at once
     - Not subject to commit, save, or exportcommands
     - By default they only have a unique ID but you can assign name - 'named volume'
+    - you can tear down the containers and volumes by running `$ docker-compose down -v`  
 
 * Bind Mounting
     - Maps a host file or directory to a container file or directory
@@ -259,6 +312,7 @@ tip:-> Static IPs & using IPs for talking to containers is an anti-pattern. Avoi
         - `... run -v /Users/bret/stuff:/path/container`
 
 ### Docker Compose
+
 
 
 ### Docker swarm
@@ -372,7 +426,6 @@ docker-machine rm $(docker-machine ls -q) # Delete all VMs and their disk images
 
 ----
 
-
 ### References
 1. https://docs.docker.com/compose/compose-file/
 1. https://training.play-with-docker.com/docker-volumes/
@@ -388,3 +441,4 @@ docker-machine rm $(docker-machine ls -q) # Delete all VMs and their disk images
 1. https://github.com/nodejs/docker-node/blob/master/docs/BestPractices.md
 1. https://medium.com/@huseinzolkepli/elk-for-flask-bc486d58deb3
 1. https://www.elastic.co/guide/en/elasticsearch/reference/6.5/deb.html
+1. https://www.bogotobogo.com/DevOps/Docker/Docker_ELK_ElasticSearch_Logstash_Kibana.php

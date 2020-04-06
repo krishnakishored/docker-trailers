@@ -1,5 +1,26 @@
 # Docker Tutorial notes
 ------    
+### Kong
+
+
+##### Installation 
+1. DB-less mode
+
+~~~sh 
+
+$ docker network create kong-net
+# This step is not strictly needed for running Kong in DB-less mode, but it is a good precaution in case you want to add other things in the future (like a rate-limiting plugin backed up by a Redis cluster).
+
+
+$ docker volume create kong-vol
+$ docker volume inspect kong-vol
+#         "Mountpoint": "/var/lib/docker/volumes/kong-vol/_data",
+
+~~~
+
+
+
+-------------
 
 ### ELK stack
 
@@ -7,7 +28,7 @@
 
 1. elasticsearch & kibana  
     Submit a _cat/nodes request to see that the nodes are up and running:
-        - `$ curl -X GET "localhost:9200/_cat/nodes?v&pretty"`
+        - ` $ curl -X GET "localhost:9200/_cat/nodes?v&pretty" `
 
 #### Logstash 
 1. Logstash has two types of configuration files: pipeline configuration files, which define the Logstash processing pipeline, and settings files, which specify options that control Logstash startup and execution.
@@ -41,6 +62,17 @@
         {"type":"index-pattern","id":"e1eaf1f0-3cf0-11ea-9b8c-432d77c94b5d","attributes":{"title":"logstash-*","timeFieldName":"@timestamp"},"references":[],"migrationVersion":{"index-pattern":"6.5.0"},"updated_at":"2020-01-22T08:26:26.830Z","version":"WzMsMV0="}%
 
 
+#### Beats
+1. Beats are open source data shippers that you install as agents on your servers to send operational data to Elasticsearch.  
+   Elastic provides Beats for capturing: Audit data (Auditbeat), Log files(Filebeat), Cloud data (Functionbeat), Availability(Heartbeat), Systemd journals(Journalbeat), Metrics(Metricbeat), Network traffic(Packetbeat), Windows event logs(Winlogbeat)
+1. Beats can send data directly to Elasticsearch or via Logstash, where you can further process and enhance the data, before visualizing it in Kibana.
+
+1. `Filebeat` is part of the Elastic Stack, meaning it works seamlessly with Logstash, Elasticsearch, and Kibana. Whether you want to transform or enrich your logs and files with Logstash, fiddle with some analytics in Elasticsearch, or build and share dashboards in Kibana, Filebeat offers a lightweight way to forward and centralize logs and files.
+1. Aggregate, “ tail -f ” & search
+   After you start Filebeat, open the Logs UI and watch your files being tailed right in Kibana. Use the search bar to filter by service, app, host, datacenter, or other criteria to track down curious behavior across your aggregated logs.
+
+
+
 --------
 #### Tips for running ELK
 
@@ -52,7 +84,7 @@
 
 1. `$ lsof -PiTCP -sTCP:LISTEN`
 
---------  
+---------------------  
 ### Docker Concepts
 
 * Docker is a platform for developers and sysadmins to develop, deploy, and run applications with containers. The use of Linux containers to deploy applications is called containerization. Containers are not new, but their use for easily deploying applications is.
@@ -364,6 +396,7 @@ tip:-> Static IPs & using IPs for talking to containers is an anti-pattern. Avoi
 ----
 * part2
 * Note: Accessing the name of the host when inside a container retrieves the container ID, which is like the process ID for a running executable.
+
 ~~~docker
     docker build -t friendlyhello .  # Create image using this directory's Dockerfile
     docker run -p 4000:80 friendlyhello  # Run "friendlyhello" mapping port 4000 to 80
@@ -429,10 +462,7 @@ docker-machine rm $(docker-machine ls -q) # Delete all VMs and their disk images
 ### References
 1. https://docs.docker.com/compose/compose-file/
 1. https://training.play-with-docker.com/docker-volumes/
-1. https://www.elastic.co/guide/en/elastic-stack-get-started/7.1/get-started-elastic-stack.html
-1. https://linuxize.com/post/how-to-install-elasticsearch-on-ubuntu-18-04/
-1. https://www.elastic.co/guide/en/elasticsearch/reference/7.2/docker.html
-1. https://www.elastic.co/guide/en/elasticsearch/reference/current/important-settings.html
+
 1. https://12factor.net/
 1. https://www.oreilly.com/ideas/3-docker-compose-features-for-improving-team-development-workflow
 1. https://www.qemu.org/
@@ -440,5 +470,18 @@ docker-machine rm $(docker-machine ls -q) # Delete all VMs and their disk images
 1. https://github.com/BretFisher/node-docker-good-defaults
 1. https://github.com/nodejs/docker-node/blob/master/docs/BestPractices.md
 1. https://medium.com/@huseinzolkepli/elk-for-flask-bc486d58deb3
+
+- Elastic Search
+
 1. https://www.elastic.co/guide/en/elasticsearch/reference/6.5/deb.html
 1. https://www.bogotobogo.com/DevOps/Docker/Docker_ELK_ElasticSearch_Logstash_Kibana.php
+1. https://www.elastic.co/guide/en/elastic-stack-get-started/7.1/get-started-elastic-stack.html
+1. https://linuxize.com/post/how-to-install-elasticsearch-on-ubuntu-18-04/
+1. https://www.elastic.co/guide/en/elasticsearch/reference/7.2/docker.html
+1. https://www.elastic.co/guide/en/elasticsearch/reference/current/important-settings.html
+
+- Kong
+
+1. https://docs.konghq.com/install/docker/
+1. https://docs.konghq.com/2.0.x/db-less-and-declarative-config/#the-declarative-configuration-format
+1. https://medium.com/@matias_azucas/db-less-kong-tutorial-8cbf8f70b266

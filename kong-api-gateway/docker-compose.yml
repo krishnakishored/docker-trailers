@@ -1,0 +1,46 @@
+version: '3.7'
+
+services:
+    kong:
+        build:
+            context: kong/
+        container_name: kong_nodb
+        volumes:
+            - ./kong/kong.yml:/kong.yml:ro
+        ports:
+            - "8000:8000/tcp"
+            - "8001:8001/tcp"
+            - "8443:8443/tcp"
+            - "8444:8444/tcp"
+        environment:
+            KONG_DATABASE: "off" # saying to kong that we will not use a database
+            KONG_DECLARATIVE_CONFIG: kong.yml # which declarative config we want to use and where is it.
+            
+        healthcheck:
+            test: ["CMD", "kong", "health"]
+            # test: ["CMD", "curl", "-f", "http://kong:8000"]
+            interval: 10s
+            timeout: 10s
+            retries: 10
+        restart: on-failure
+        networks:
+            - kong-net
+        depends_on: 
+            - web1
+    # web1: NGINX webserver that serves a simple page containing its hostname, IP address and port ...             
+    web1:
+        image: nginxdemos/hello:latest
+        container_name: web1
+        ports:
+            - "9091:80"    
+        networks:
+            - kong-net
+
+networks:
+ kong-net:
+    driver: bridge
+
+
+
+ 
+ 

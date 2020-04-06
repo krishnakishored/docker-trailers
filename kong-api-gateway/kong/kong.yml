@@ -1,0 +1,35 @@
+_format_version: "1.1"
+
+
+
+services:
+  - name: web1
+    url: http://172.20.0.2:9091 # https://192.168.1.1:9091
+    # plugins:
+    # - name: key-auth
+    routes:
+    - name: web1
+      paths:
+      - /
+  
+  # consumers:
+  # - username: my-user
+  #   keyauth_credentials:
+  #   - key: my-key    
+    
+# _format_version: "1.1"
+
+# services:
+# - name: my-service
+#   url: https://example.com
+#   plugins:
+#   - name: key-auth
+#   routes:
+#   - name: my-route
+#     paths:
+#     - /
+
+# consumers:
+# - username: my-user
+#   keyauth_credentials:
+#   - key: my-key

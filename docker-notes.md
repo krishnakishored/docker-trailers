@@ -10,13 +10,24 @@
 
 $ docker network create kong-net
 # This step is not strictly needed for running Kong in DB-less mode, but it is a good precaution in case you want to add other things in the future (like a rate-limiting plugin backed up by a Redis cluster).
-
-
-$ docker volume create kong-vol
-$ docker volume inspect kong-vol
-#         "Mountpoint": "/var/lib/docker/volumes/kong-vol/_data",
-
 ~~~
+
+1. Kong comes with a default configuration file that can be found at `/etc/kong/kong.conf.default` if you installed Kong via one of the official packages. To start configuring Kong, you can copy this file: `$ cp /etc/kong/kong.conf.default /etc/kong/kong.conf`
+
+1. You can verify the integrity of your settings with the check command: `$ kong check <path/to/kong.conf>`  
+
+    `$ kong config -c /etc/kong/kong.conf parse ./usr/local/kong/declarative/kong.yml --v`
+
+
+     2020/04/06 07:06:59 [verbose] Kong: 1.5.1
+     2020/04/06 07:06:59 [verbose] prefix in use: /usr/local/kong
+     2020/04/06 07:06:59 [verbose] reading config file at /usr/local/kong/.kong_env
+     2020/04/06 07:06:59 [verbose] prefix in use: /usr/local/kong
+     2020/04/06 07:07:00 [info] parse successful
+
+
+
+
 
 
 
@@ -485,3 +496,4 @@ docker-machine rm $(docker-machine ls -q) # Delete all VMs and their disk images
 1. https://docs.konghq.com/install/docker/
 1. https://docs.konghq.com/2.0.x/db-less-and-declarative-config/#the-declarative-configuration-format
 1. https://medium.com/@matias_azucas/db-less-kong-tutorial-8cbf8f70b266
+1. https://docs.konghq.com/0.13.x/configuration/

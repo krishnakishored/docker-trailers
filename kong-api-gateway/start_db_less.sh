@@ -1,6 +1,6 @@
-docker run -d --name kong \
+docker run -d --name kong_nodb \
      --network=kong-net \
-     -v "kong-vol:/usr/local/kong/declarative" \
+     --mount type=bind,source="$(pwd)"/kong,target=/usr/local/kong/declarative \
      -e "KONG_DATABASE=off" \
      -e "KONG_DECLARATIVE_CONFIG=/usr/local/kong/declarative/kong.yml" \
      -e "KONG_PROXY_ACCESS_LOG=/dev/stdout" \
@@ -12,4 +12,16 @@ docker run -d --name kong \
      -p 8443:8443 \
      -p 127.0.0.1:8001:8001 \
      -p 127.0.0.1:8444:8444 \
-     kong:latest
+     kong:1.5.1-ubuntu 
+     
+
+
+     # -v "kong-vol:/usr/local/kong/declarative" \
+     # -v "$(pwd)"/kong:/usr/local/kong/declarative \
+
+##################### Tips  ###############################################     
+# 1. create the docker-network   (Prequisite)
+     # docker network create kong-net 
+# 2. #  watch -n1 docker container logs kong  
+# 3. curl -i http://localhost:8001/
+# 4. curl -i http://localhost:8001/services                                                                                                                          ✭

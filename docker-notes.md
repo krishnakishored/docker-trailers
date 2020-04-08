@@ -1,47 +1,296 @@
 # Docker Tutorial notes
-------    
-### Kong
+------------------------------------------    
 
+## Kong
 
-##### Installation 
-1. DB-less mode
+The `Kong API Gateway` is open-source, cloud-native and platform agnostic, allowing it to be deployed in a wide range of different patterns including monolithic, service-based, serverless and microservices/service mesh-based. 
+Some of the most common applications of API policies include:
+ - Security
+ - Traffic Limiting
+ - Transformation of Data
 
-~~~sh 
+Kong is a Lua application running in Nginx and made possible by the lua-nginx-module. Instead of compiling Nginx with this module, Kong is distributed along with `OpenResty`, which already includes lua-nginx-module. OpenResty is not a fork of Nginx, but a bundle of modules extending its capabilities.
 
-$ docker network create kong-net
-# This step is not strictly needed for running Kong in DB-less mode, but it is a good precaution in case you want to add other things in the future (like a rate-limiting plugin backed up by a Redis cluster).
-~~~
+- `plugin`: a plugin executing actions inside Kong before or after a request has been proxied to the upstream API.
+- `Service`: the Kong entity representing an external upstream API or microservice.
+- `Route`: the Kong entity representing a way to map downstream requests to upstream services.
+- `Consumer`: an entity that makes requests for Kong to proxy; it represents either a user or an external service.
+- `Credential`: a unique string associated with a Consumer, also referred to as an API key.
+- `Upstream service`: this refers to your own API/service sitting behind Kong, to which client requests are forwarded
+
+### Getting Started
+
+#### Installation with Cassandra DB
+1. Create docker network  -  `$ docker network create kong-net`
+1. Start your database   
+    `
+        $ docker run -d --name kong-database \
+            --network=kong-net \
+            -p 9042:9042 \
+            cassandra:3
+    `
+1. Prepare your database. Run the migrations with an ephemeral Kong container:  
+    `
+    $ docker run --rm \
+     --network=kong-net \
+     -e "KONG_DATABASE=cassandra" \
+     -e "KONG_PG_HOST=kong-database" \
+     -e "KONG_PG_PASSWORD=kong" \
+     -e "KONG_CASSANDRA_CONTACT_POINTS=kong-database" \
+     kong:latest kong migrations bootstrap
+    `
+1. Start Kong  
+    `
+    $ docker run -d --name kong \
+        --network=kong-net \
+        -e "KONG_DATABASE=cassandra" \
+        -e "KONG_PG_HOST=kong-database" \
+        -e "KONG_PG_PASSWORD=kong" \
+        -e "KONG_CASSANDRA_CONTACT_POINTS=kong-database" \
+        -e "KONG_PROXY_ACCESS_LOG=/dev/stdout" \
+        -e "KONG_ADMIN_ACCESS_LOG=/dev/stdout" \
+        -e "KONG_PROXY_ERROR_LOG=/dev/stderr" \
+        -e "KONG_ADMIN_ERROR_LOG=/dev/stderr" \
+        -e "KONG_ADMIN_LISTEN=0.0.0.0:8001, 0.0.0.0:8444 ssl" \
+        -p 8000:8000 \
+        -p 8443:8443 \
+        -p 127.0.0.1:8001:8001 \
+        -p 127.0.0.1:8444:8444 \
+        kong:latest
+    `
+
+#### Installation with DB-less mode
+
+1. Create docker network - `$ docker network create kong-net`
+> This step is not strictly needed for running Kong in DB-less mode, but it is a good precaution in case you want to add other things in the future (like a rate-limiting plugin backed up by a Redis cluster).
 
 1. Kong comes with a default configuration file that can be found at `/etc/kong/kong.conf.default` if you installed Kong via one of the official packages. To start configuring Kong, you can copy this file: `$ cp /etc/kong/kong.conf.default /etc/kong/kong.conf`
 
 1. You can verify the integrity of your settings with the check command: `$ kong check <path/to/kong.conf>`  
+    `
+    $ kong config -c /etc/kong/kong.conf parse ./usr/local/kong/declarative/kong.yml --v
+    `
+        2020/04/06 07:24:22 [verbose] Kong: 2.0.2
+        2020/04/06 07:24:22 [verbose] prefix in use: /usr/local/kong
+        2020/04/06 07:24:22 [verbose] reading config file at /usr/local/kong/.kong_env
+        2020/04/06 07:24:22 [verbose] prefix in use: /usr/local/kong
+        2020/04/06 07:24:22 [info] parse successful
 
-    `$ kong config -c /etc/kong/kong.conf parse ./usr/local/kong/declarative/kong.yml --v`
+1. Kong exposes a RESTful Admin API on port :8001. Kong’s configuration, including adding Services and Routes, is made via requests on that API.
+1. Loading The Declarative Configuration File
+    - update the files. e.g.: in kong.yml (url: http://192.168.1.149:9091)
+    `$ kong reload`
+
+#### Configuring a service
+
+1. Add your Service using the Admin API   
+    `
+    $ curl -i -X POST \
+    --url http://localhost:8001/services/ \
+    --data 'name=example-service' \
+    --data 'url=http://mockbin.org'
+    `
+1. Add a Route for the Service  
+    `
+    $ curl -i -X POST \
+    --url http://localhost:8001/services/example-service/routes \
+    --data 'hosts[]=example.com'
+    `
+    - Kong is now aware of your Service and ready to proxy requests.   
+
+1. Forward your requests through Kong
+    `
+        $ curl -i -X GET \
+        --url http://localhost:8000/ \
+        --header 'Host: example.com'
+    `
+    - Note that by default Kong handles proxy requests on port :8000
+    - A successful response means Kong is now forwarding requests made to http://localhost:8000 to the url we configured in step #1, and is forwarding the response back to us. Kong knows to do this through the header defined in the above cURL request:
+
+#### Enabling Plugins    
+
+1. Configure the key-auth plugin
+    `
+    $ curl -i -X POST \
+    --url http://localhost:8001/services/example-service/plugins/ \
+    --data 'name=key-auth'
+    `
+1. Verify that the plugin is properly configured
+    `
+    $ curl -i -X GET \
+    --url http://localhost:8000/ \
+    --header 'Host: example.com'
+    `
+    - Since you did not specify the required apikey header or parameter, the response should be 401 Unauthorized:
+
+#### Adding Consumers
+1. Create a Consumer through the RESTful API
+    `
+    $ curl -i -X POST \
+    --url http://localhost:8001/consumers/ \
+    --data "username=Jason"
+    `
+- Kong also accepts a custom_id parameter when creating consumers to associate a consumer with your existing user database
+
+1. Provision key credentials for your Consumer
+    `
+    $ curl -i -X POST \
+    --url http://localhost:8001/consumers/Jason/key-auth/ \
+    --data 'key=ENTER_KEY_HERE'
+    `
+
+### Request Transformer
+A Kong plugin that transforms the request sent by a client on the fly on Kong, before hitting the upstream server.
+This plugin is compatible with requests with the following protocols: http, https  
+This plugin is compatible with DB-less mode  
+
+- Enabling the plugin on a Service
+    `
+     $  curl -X POST http://kong:8001/services/{service}/plugins \
+        --data "name=request-transformer"  \
+        --data "config.remove.headers=x-toremove" \
+        --data "config.remove.headers=x-another-one" \
+        --data "config.remove.querystring=qs-old-name:qs-new-name" \
+        --data "config.remove.querystring=qs2-old-name:qs2-new-name" \
+        --data "config.remove.body=formparam-toremove" \
+        --data "config.remove.body=formparam-another-one" \
+        --data "config.rename.headers=header-old-name:header-new-name" \
+        --data "config.rename.headers=another-old-name:another-new-name" \
+        --data "config.rename.querystring=qs-old-name:qs-new-name" \
+        --data "config.rename.querystring=qs2-old-name:qs2-new-name" \
+        --data "config.rename.body=param-old:param-new" \
+        --data "config.rename.body=param2-old:param2-new" \
+        --data "config.add.headers=x-new-header:value" \
+        --data "config.add.headers=x-another-header:something" \
+        --data "config.add.querystring=new-param:some_value" \
+        --data "config.add.querystring=another-param:some_value" \
+        --data "config.add.body=new-form-param:some_value" \
+        --data "config.add.body=another-form-param:some_value"
+    `
+- Enabling the plugin on a Route
+    `
+    $ curl -X POST http://kong:8001/routes/{route}/plugins \
+        --data "name=request-transformer"  \
+        --data "config.remove.headers=x-toremove" \
+        --data "config.remove.headers=x-another-one" \
+        --data "config.remove.querystring=qs-old-name:qs-new-name" \
+        --data "config.remove.querystring=qs2-old-name:qs2-new-name" \
+        --data "config.remove.body=formparam-toremove" \
+        --data "config.remove.body=formparam-another-one" \
+        --data "config.rename.headers=header-old-name:header-new-name" \
+        --data "config.rename.headers=another-old-name:another-new-name" \
+        --data "config.rename.querystring=qs-old-name:qs-new-name" \
+        --data "config.rename.querystring=qs2-old-name:qs2-new-name" \
+        --data "config.rename.body=param-old:param-new" \
+        --data "config.rename.body=param2-old:param2-new" \
+        --data "config.add.headers=x-new-header:value" \
+        --data "config.add.headers=x-another-header:something" \
+        --data "config.add.querystring=new-param:some_value" \
+        --data "config.add.querystring=another-param:some_value" \
+        --data "config.add.body=new-form-param:some_value" \
+        --data "config.add.body=another-form-param:some_value"
+    `
+    - {route} is the id or name of the Route that this plugin configuration will target.
 
 
-     2020/04/06 07:06:59 [verbose] Kong: 1.5.1
-     2020/04/06 07:06:59 [verbose] prefix in use: /usr/local/kong
-     2020/04/06 07:06:59 [verbose] reading config file at /usr/local/kong/.kong_env
-     2020/04/06 07:06:59 [verbose] prefix in use: /usr/local/kong
-     2020/04/06 07:07:00 [info] parse successful
 
+- Enabling the plugin on a Consumer
+    `
+    $ curl -X POST http://kong:8001/consumers/{consumer}/plugins \
+        --data "name=request-transformer" \
+        \
+        --data "config.remove.headers=x-toremove" \
+        --data "config.remove.headers=x-another-one" \
+        --data "config.remove.querystring=qs-old-name:qs-new-name" \
+        --data "config.remove.querystring=qs2-old-name:qs2-new-name" \
+        --data "config.remove.body=formparam-toremove" \
+        --data "config.remove.body=formparam-another-one" \
+        --data "config.rename.headers=header-old-name:header-new-name" \
+        --data "config.rename.headers=another-old-name:another-new-name" \
+        --data "config.rename.querystring=qs-old-name:qs-new-name" \
+        --data "config.rename.querystring=qs2-old-name:qs2-new-name" \
+        --data "config.rename.body=param-old:param-new" \
+        --data "config.rename.body=param2-old:param2-new" \
+        --data "config.add.headers=x-new-header:value" \
+        --data "config.add.headers=x-another-header:something" \
+        --data "config.add.querystring=new-param:some_value" \
+        --data "config.add.querystring=another-param:some_value" \
+        --data "config.add.body=new-form-param:some_value" \
+        --data "config.add.body=another-form-param:some_value"
+    `
+    - {consumer} is the id or username of the Consumer that this plugin configuration will target.
+    - You can combine consumer.id and service.id in the same request, to further narrow the scope of the plugin.
 
+- A plugin which is not associated to any Service, Route, or Consumer (or API, if you are using an older version of Kong) is considered "`global`", and will be run on every request. Using a database, all plugins can be configured using the `http://kong:8001/plugins/` endpoint.
 
+- Dynamic Transformation Based on Request Content
+The Request Transformer plugin bundled with Kong Enterprise allows for adding or replacing content in the upstream request based on variable data found in the client request, such as request headers, query string parameters, or URI parameters as defined by a URI capture group.
 
+- Order of execution
+Plugin performs the response transformation in following order  - `remove –> rename –> replace –> add –> append`  
 
+- Examples 
 
+1. Add multiple headers by passing each header:value pair separately:
+    `
+    curl -X POST http://localhost:8001/services/example-service/plugins \
+    --data "name=request-transformer" \
+    --data "config.add.headers[1]=h1:v1" \
+    --data "config.add.headers[2]=h2:v1"
+    `
+    incoming request headers - h1: v1
+    upstream proxied headers - h1: v1 , h2: v1
 
--------------
+1. Add multiple headers by passing comma separated header:value pair (only possible with a database):  
+    `
+    $ curl -X POST http://localhost:8001/services/example-service/plugins \
+    --data "name=request-transformer" \
+    --data "config.add.headers=h1:v1,h2:v2"
+    `
+1. Add multiple headers passing config as JSON body (only possible with a database):  
+    `
+    $ curl -X POST http://localhost:8001/services/example-service/plugins \
+    --header 'content-type: application/json' \
+    --data '{"name": "request-transformer", "config": {"add": {"headers": ["h1:v2", "h2:v1"]}}}'
+    `
+1. Add a querystring and a header:
+    `
+    $ curl -X POST http://localhost:8001/services/example-service/plugins \
+    --data "name=request-transformer" \
+    --data "config.add.querystring=q1:v2,q2:v1" \
+    --data "config.add.headers=h1:v1"
+    `
+1. Append multiple headers and remove a body parameter:
+`
+$ curl -X POST http://localhost:8001/services/example-service/plugins \
+  --header 'content-type: application/json' \
+  --data '{"name": "request-transformer", "config": {"append": {"headers": ["h1:v2", "h2:v1"]}, "remove": {"body": ["p1"]}}}
+`
 
-### ELK stack
+### Health Checks
+Kong supports multiple types of health checks to identify unhealthy targets on individual Kong nodes.
+- Active Checks: Periodically request a specific HTTP or HTTPS endpoint and mark it as healthy or unhealthy based on its response.
+- Passive Checks: Analyze proxied traffic on an ongoing basis to determine the health of targets. This method is also known as a circuit breaker.
+By actively and passively monitoring the health of targets, you can take remedial action when needed to restore functionality and ensure all nodes in a Kong cluster have access to the endpoints they require.
 
-#### Elastic Search 
+### Load Balancing
+Kong allows load balancing using several different methods:
+- A Records: Using an A record containing multiple IP addresses, all entries will be treated equally in a round robin.
+- DNS-based: DNS-based load balancing allows backend service registration to occur outside of Kong with periodic updates from the DNS server.
+- SRV Records: SRV records can contain IP addresses, port information and weighting, allowing multiple instances of a service to run via different ports on the same IP address.
+The last method is particularly useful as the weighting allows the load balancer to adjust individual services according to their weighting, rather than treating them all equally.
+
+---------------------------------------
+
+## ELK stack
+
+### Elastic Search 
 
 1. elasticsearch & kibana  
     Submit a _cat/nodes request to see that the nodes are up and running:
         - ` $ curl -X GET "localhost:9200/_cat/nodes?v&pretty" `
 
-#### Logstash 
+### Logstash 
 1. Logstash has two types of configuration files: pipeline configuration files, which define the Logstash processing pipeline, and settings files, which specify options that control Logstash startup and execution.
     - `$ docker run --rm -it -v ./pipeline/:/usr/share/logstash/pipeline/ docker.elastic.co/logstash/logstash:7.5.2`
 
@@ -49,7 +298,7 @@ $ docker network create kong-net
    `$ ls | nc localhost 5000`
 
 
-#### Kibana 
+### Kibana 
 1. Kibana has its own API for saved objects, including Index Patterns.
    The following examples are for an Index Pattern with an ID of logstash-*.
    
@@ -73,7 +322,7 @@ $ docker network create kong-net
         {"type":"index-pattern","id":"e1eaf1f0-3cf0-11ea-9b8c-432d77c94b5d","attributes":{"title":"logstash-*","timeFieldName":"@timestamp"},"references":[],"migrationVersion":{"index-pattern":"6.5.0"},"updated_at":"2020-01-22T08:26:26.830Z","version":"WzMsMV0="}%
 
 
-#### Beats
+### Beats
 1. Beats are open source data shippers that you install as agents on your servers to send operational data to Elasticsearch.  
    Elastic provides Beats for capturing: Audit data (Auditbeat), Log files(Filebeat), Cloud data (Functionbeat), Availability(Heartbeat), Systemd journals(Journalbeat), Metrics(Metricbeat), Network traffic(Packetbeat), Windows event logs(Winlogbeat)
 1. Beats can send data directly to Elasticsearch or via Logstash, where you can further process and enhance the data, before visualizing it in Kibana.
@@ -82,10 +331,7 @@ $ docker network create kong-net
 1. Aggregate, “ tail -f ” & search
    After you start Filebeat, open the Logs UI and watch your files being tailed right in Kibana. Use the search bar to filter by service, app, host, datacenter, or other criteria to track down curious behavior across your aggregated logs.
 
-
-
---------
-#### Tips for running ELK
+### Tips for running ELK
 
 1. By default, the stack exposes the following ports:
     - `5000`: Logstash will listen for any TCP input on port 5000
@@ -497,3 +743,5 @@ docker-machine rm $(docker-machine ls -q) # Delete all VMs and their disk images
 1. https://docs.konghq.com/2.0.x/db-less-and-declarative-config/#the-declarative-configuration-format
 1. https://medium.com/@matias_azucas/db-less-kong-tutorial-8cbf8f70b266
 1. https://docs.konghq.com/0.13.x/configuration/
+1. https://discuss.konghq.com/t/rfc-kong-native-declarative-config-format/2719
+1. https://docs.konghq.com/hub/kong-inc/request-transformer/#

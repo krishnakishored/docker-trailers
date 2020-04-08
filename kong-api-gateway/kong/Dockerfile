@@ -1,4 +1,4 @@
-FROM kong:1.5.1-ubuntu
+FROM kong:ubuntu
 
 # COPY kong.yml /
 

@@ -12,8 +12,8 @@ docker run -d --name kong_nodb \
      -p 8443:8443 \
      -p 127.0.0.1:8001:8001 \
      -p 127.0.0.1:8444:8444 \
-     kong:1.5.1-ubuntu 
-     
+     kong:ubuntu 
+
 
 
      # -v "kong-vol:/usr/local/kong/declarative" \

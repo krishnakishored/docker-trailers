@@ -1,5 +1,5 @@
-docker exec -it kong_nodb bash
-
+docker exec -it kong sh
+# docker exec -it kong_nodb bash
 # #Checking The Declarative Configuration File
 
 
@@ -7,4 +7,5 @@ docker exec -it kong_nodb bash
 :'
 $ kong version
 $ kong config -c /etc/kong/kong.conf parse ./usr/local/kong/declarative/kong.yml --v
+$ kong start -c /etc/kong/kong.conf
 '

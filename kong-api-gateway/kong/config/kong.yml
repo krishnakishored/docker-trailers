@@ -4,14 +4,44 @@ _format_version: "1.1"  # The only mandatory piece of metadata
 
 services:
   - name: web1
-    url: http://172.20.0.2:9091 # https://192.168.1.1:9091
+    url: http://192.168.1.149:9091  # https://192.168.1.1:9091
     # plugins:
     # - name: key-auth
     routes:
     - name: web1
       paths:
       - /
-  
+    plugins:
+      - name: request-transformer
+        service: {service}
+        config: 
+          remove.headers:
+          - x-toremove
+          - x-another-one
+          remove.querystring:
+          - qs-old-name:qs-new-name
+          - qs2-old-name:qs2-new-name
+          remove.body:
+          - formparam-toremove
+          - formparam-another-one
+          rename.headers:
+          - header-old-name:header-new-name
+          - another-old-name:another-new-name
+          rename.querystring:
+          - qs-old-name:qs-new-name
+          - qs2-old-name:qs2-new-name
+          rename.body:
+          - param-old:param-new
+          - param2-old:param2-new
+          add.headers:
+          - x-new-header:value
+          - x-another-header:something
+          add.querystring:
+          - new-param:some_value
+          - another-param:some_value
+          add.body:
+          - new-form-param:some_value
+          - another-form-param:some_value  
   # consumers:
   # - username: my-user
   #   keyauth_credentials:

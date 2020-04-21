@@ -1,5 +1,4 @@
-# Docker Tutorial notes
-------------------------------------------    
+-------------------------------------------------------------------------------  
 
 ## Kong
 
@@ -18,9 +17,33 @@ Kong is a Lua application running in Nginx and made possible by the lua-nginx-mo
 - `Credential`: a unique string associated with a Consumer, also referred to as an API key.
 - `Upstream service`: this refers to your own API/service sitting behind Kong, to which client requests are forwarded
 
-### Getting Started
+### Installation with DB-less mode
+1. When running Kong DB-less, the configuration of entities is done in a second configuration file, in YAML or JSON, using declarative configuration.
+1. Create docker network - `$ docker network create kong-net`
+> This step is not strictly needed for running Kong in DB-less mode, but it is a good precaution in case you want to add other things in the future (like a rate-limiting plugin backed up by a Redis cluster).
 
-#### Installation with Cassandra DB
+1. Read-Only Admin API
+Since the only way to configure entities is via declarative configuration, the endpoints for CRUD operations on entities are effectively read-only in the Admin API when running Kong in DB-less mode. GET operations for inspecting entities work as usual, but attempts to POST, PATCH PUT or DELETE in endpoints such as /services or /plugins will return HTTP 405 Not Allowed.
+This restriction is limited to what would be otherwise database operations. In particular, using POST to set the health state of Targets is still enabled, since this is a node-specific in-memory operation
+
+1. Kong comes with a default configuration file that can be found at `/etc/kong/kong.conf.default` if you installed Kong via one of the official packages. To start configuring Kong, you can copy this file: `$ cp /etc/kong/kong.conf.default /etc/kong/kong.conf`
+
+1. You can verify the integrity of your settings with the check command: `$ kong check <path/to/kong.conf>`  
+    `
+    $ kong config -c /etc/kong/kong.conf parse ./usr/local/kong/declarative/kong.yml --v
+    `
+        2020/04/06 07:24:22 [verbose] Kong: 2.0.2
+        2020/04/06 07:24:22 [verbose] prefix in use: /usr/local/kong
+        2020/04/06 07:24:22 [verbose] reading config file at /usr/local/kong/.kong_env
+        2020/04/06 07:24:22 [verbose] prefix in use: /usr/local/kong
+        2020/04/06 07:24:22 [info] parse successful
+
+1. Kong exposes a RESTful Admin API on port :8001. Kong’s configuration, including adding Services and Routes, is made via requests on that API.
+1. Loading The Declarative Configuration File
+    - update the files. e.g.: in kong.yml (url: http://192.168.1.149:9091)
+    `$ kong reload`
+
+### Installation with Cassandra DB
 1. Create docker network  -  `$ docker network create kong-net`
 1. Start your database   
     `
@@ -58,28 +81,6 @@ Kong is a Lua application running in Nginx and made possible by the lua-nginx-mo
         -p 127.0.0.1:8444:8444 \
         kong:latest
     `
-
-#### Installation with DB-less mode
-
-1. Create docker network - `$ docker network create kong-net`
-> This step is not strictly needed for running Kong in DB-less mode, but it is a good precaution in case you want to add other things in the future (like a rate-limiting plugin backed up by a Redis cluster).
-
-1. Kong comes with a default configuration file that can be found at `/etc/kong/kong.conf.default` if you installed Kong via one of the official packages. To start configuring Kong, you can copy this file: `$ cp /etc/kong/kong.conf.default /etc/kong/kong.conf`
-
-1. You can verify the integrity of your settings with the check command: `$ kong check <path/to/kong.conf>`  
-    `
-    $ kong config -c /etc/kong/kong.conf parse ./usr/local/kong/declarative/kong.yml --v
-    `
-        2020/04/06 07:24:22 [verbose] Kong: 2.0.2
-        2020/04/06 07:24:22 [verbose] prefix in use: /usr/local/kong
-        2020/04/06 07:24:22 [verbose] reading config file at /usr/local/kong/.kong_env
-        2020/04/06 07:24:22 [verbose] prefix in use: /usr/local/kong
-        2020/04/06 07:24:22 [info] parse successful
-
-1. Kong exposes a RESTful Admin API on port :8001. Kong’s configuration, including adding Services and Routes, is made via requests on that API.
-1. Loading The Declarative Configuration File
-    - update the files. e.g.: in kong.yml (url: http://192.168.1.149:9091)
-    `$ kong reload`
 
 #### Configuring a service
 
@@ -280,7 +281,7 @@ Kong allows load balancing using several different methods:
 - SRV Records: SRV records can contain IP addresses, port information and weighting, allowing multiple instances of a service to run via different ports on the same IP address.
 The last method is particularly useful as the weighting allows the load balancer to adjust individual services according to their weighting, rather than treating them all equally.
 
----------------------------------------
+-------------------------------------------------------------------------------
 
 ## ELK stack
 
@@ -341,7 +342,7 @@ The last method is particularly useful as the weighting allows the load balancer
 
 1. `$ lsof -PiTCP -sTCP:LISTEN`
 
----------------------  
+------------------------------------------------------------------------------- 
 ### Docker Concepts
 
 * Docker is a platform for developers and sysadmins to develop, deploy, and run applications with containers. The use of Linux containers to deploy applications is called containerization. Containers are not new, but their use for easily deploying applications is.
@@ -745,3 +746,10 @@ docker-machine rm $(docker-machine ls -q) # Delete all VMs and their disk images
 1. https://docs.konghq.com/0.13.x/configuration/
 1. https://discuss.konghq.com/t/rfc-kong-native-declarative-config-format/2719
 1. https://docs.konghq.com/hub/kong-inc/request-transformer/#
+1. https://docs.konghq.com/getting-started-guide/latest/overview/
+1. https://hub.docker.com/_/kong
+1. https://github.com/bitnami/bitnami-docker-kong/blob/master/docker-compose-cluster.yml
+
+- Cassandra
+1. https://docs.docker.com/compose/startup-order/
+1. https://docs.datastax.com/en/cql-oss/3.x/cql/cql_reference/cqlReferenceTOC.html

@@ -3,14 +3,14 @@ version: '3.7'
 services: 
 
 services:
-    db:
+    kong-database:
         image: cassandra:3
         container_name: kong-database
         volumes:
-            - ./kong/config/db:/var/lib/cassandra
+            - ./kong/db:/var/lib/cassandra
         environment:
             CASSANDRA_CLUSTER_NAME: cassandra-cluster
-            CASSANDRA_SEEDS: db
+            CASSANDRA_SEEDS: kong-database
             CASSANDRA_USER: kong
             CASSANDRA_PASSWORD: kong
         ports:
@@ -27,51 +27,76 @@ services:
         networks:
             - kong-net
 
-    # kong-migrations:
+    kong-migrations:
+        image: "${KONG_DOCKER_TAG:-kong:latest}"
+        command: kong migrations bootstrap
+        depends_on:
+            - kong-database
+        environment:
+            KONG_DATABASE: cassandra
+            KONG_PG_DATABASE: ${KONG_PG_DATABASE:-kong}
+            KONG_PG_HOST: kong-database
+            KONG_PG_USER: ${KONG_PG_USER:-kong}
+            KONG_PG_PASSWORD: ${KONG_PG_PASSWORD:-kong}
+            KONG_CASSANDRA_CONTACT_POINTS: kong-database
+        # secrets:
+        #     - kong_postgres_password
+        networks:
+            - kong-net
+        restart: on-failure
+        deploy:
+            restart_policy:
+                condition: on-failure
+
+    # kong-migrations-up:
     #     image: "${KONG_DOCKER_TAG:-kong:latest}"
-    #     command: kong migrations bootstrap
+    #     command: kong migrations up && kong migrations finish
     #     depends_on:
-    #         - db
+    #     - kong-database
     #     environment:
     #         KONG_DATABASE: cassandra
     #         KONG_PG_DATABASE: ${KONG_PG_DATABASE:-kong}
     #         KONG_PG_HOST: kong-database
     #         KONG_PG_USER: ${KONG_PG_USER:-kong}
-    #         KONG_PG_PASSWORD: kong
-    #     # secrets:
-    #     #     - kong_postgres_password
+    #         KONG_PG_PASSWORD: ${KONG_PG_PASSWORD:-kong}
+    #         # KONG_PG_PASSWORD_FILE: /run/secrets/kong_postgres_password
+    #       # secrets:
+    #       #   - kong_postgres_password
     #     networks:
     #         - kong-net
     #     restart: on-failure
     #     deploy:
     #         restart_policy:
-    #             condition: on-failure
+    #             condition: on-failure            
+    kong:
+        image: kong:latest
+        container_name: kong
+        depends_on:
+            - kong-database
+            - kong-migrations
+        ports:
+            - "8000:8000"
+            - "8443:8443"
+            - "127.0.0.1:8001:8001"
+            - "127.0.0.1:8444:8444"
+        environment:
+            KONG_DATABASE: cassandra
+            KONG_PG_HOST: kong-database
+            KONG_PG_USER: ${KONG_PG_USER:-kong}
+            KONG_PG_PASSWORD: ${KONG_PG_PASSWORD:-kong}
+            KONG_CASSANDRA_CONTACT_POINTS: kong-database
+            KONG_PROXY_ACCESS_LOG: /dev/stdout
+            KONG_ADMIN_ACCESS_LOG: /dev/stdout
+            KONG_PROXY_ERROR_LOG: /dev/stderr
+            KONG_ADMIN_ERROR_LOG: /dev/stderr
+            KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+            # KONG_MIGRATE: yes
+            # # See NGINX worker_processes setting at http://nginx.org/en/docs/ngx_core_module.html#worker_processes
+            # # If in doubt, set to the amount of CPU cores divided by the number of Kong/Cassandra nodes in the machine
+            # KONG_NGINX_WORKER_PROCESSES: 2
 
-    # kong:
-    #     image: kong:latest
-    #     container_name: kong
-    #     depends_on:
-    #         - db
-    #         - kong-migrations
-    #     ports:
-    #         - "8000:8000"
-    #         - "8443:8443"
-    #         - "127.0.0.1:8001:8001"
-    #         - "127.0.0.1:8444:8444"
-    #     environment:
-    #         KONG_DATABASE: cassandra
-    #         KONG_PG_HOST: kong-database
-    #         KONG_PG_USER: kong
-    #         KONG_PG_PASSWORD: kong
-    #         KONG_CASSANDRA_CONTACT_POINTS: kong-database
-    #         KONG_PROXY_ACCESS_LOG: /dev/stdout
-    #         KONG_ADMIN_ACCESS_LOG: /dev/stdout
-    #         KONG_PROXY_ERROR_LOG: /dev/stderr
-    #         KONG_ADMIN_ERROR_LOG: /dev/stderr
-    #         KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
-    #         # KONG_MIGRATE: yes
-    #     networks:
-    #         - kong-net
+        networks:
+            - kong-net
 
 networks:
     kong-net:

@@ -1,0 +1,1 @@
+docker exec -it cassandra_stack_cassandra-1 bash

@@ -1,0 +1,1 @@
+docker stack rm cassandra_stack

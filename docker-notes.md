@@ -1,3 +1,13 @@
+## Redis
+
+1. A `Redis` database holds key:value pairs and supports commands such as GET, SET, and DEL, as well as several hundred additional commands.
+1. Redis keys are always strings. Redis values may be a number of different data types. Some advanced types include geospatial items and the new stream type.
+1. Redis also allows you to set and get multiple key-value pairs in one command, `MSET` and `MGET`, respectively:
+    > 127.0.0.1:6379> MSET Lebanon Beirut Norway Oslo France Paris    
+     127.0.0.1:6379> MGET Lebanon Norway Bahamas
+    
+    the `EXISTS` command does what it sounds like, which is to check if a key exists: 
+
 -------------------------------------------------------------------------------  
 
 ## Kong

@@ -1,0 +1,30 @@
+version: "3.5"
+services:
+  cassandra-1:
+    image: cassandra
+    ports:
+      - "19042:9042"
+      - "19160:9160"
+      - "17199:7199"
+      - "7000"
+    volumes:
+       - /Users/psabbineni/gitlab/docker/cassandra/cluster/cassandra-1:/var/lib/cassandra
+    environment:
+      - CASSANDRA_SEEDS=cassandra-1,cassandra-2
+      - CASSANDRA_DC=DC1
+      - CASSANDRA_RACK=RAC1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+  cassandra-2:
+    image: cassandra
+    ports:
+      - "29042:9042"
+      - "29160:9160"
+      - "27199:7199"
+      - "7000"
+    volumes:
+       - /Users/psabbineni/gitlab/docker/cassandra/cluster/cassandra-2:/var/lib/cassandra
+    environment:
+      - CASSANDRA_SEEDS=cassandra-1,cassandra-2
+      - CASSANDRA_DC=DC1
+      - CASSANDRA_RACK=RAC2
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch

@@ -1,0 +1,25 @@
+version: '3.6'  
+services:  
+#   app:
+#     build:
+#       context: ./app
+#     depends_on:
+#       - redis
+#     environment:
+#       - REDIS_HOST=redis
+#     ports:
+#       - "5000:5000"
+  redis:
+    image: redis:latest
+    build:
+        context: .
+    container_name: redis
+    ports:
+        - "6379:6379"
+    volumes:
+        # - ./config/redis.conf:/usr/local/etc/redis/redis.conf
+        - ./redis_data:/data
+
+      
+# volumes:  
+#   redis_data:
